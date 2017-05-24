@@ -83,7 +83,7 @@ class NATEnc:
     def mlp_classifier(self, x, data_format='NHWC', reuse=False):
         with tf.variable_scope("mlp",reuse=reuse) as vs:
             z_dim = self.params['z_dim']
-            x = slim.fully_connected(x, self.params['num_classes']*40, activation_fn=tf.nn.relu)
+            x = slim.fully_connected(x, self.params['num_classes']*20, activation_fn=tf.nn.relu)
             x = slim.fully_connected(x, self.params['num_classes']*20, activation_fn=tf.nn.relu)
             x = slim.fully_connected(x, self.params['num_classes'], activation_fn=None)
 

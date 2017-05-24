@@ -7,6 +7,8 @@ import utils
 
 params = dict(test_batch_size=32,
               model_dir='/media/jan/DataExt4/pycharm/natenc-cifar10-allclass',
+              data_dir='/media/jan/DataExt4/BenchmarkDataSets/Classification/cifar-10-batches-py',
+              out_path='/home/jan/Documents/GANResults/natenc_neighbors/test_arange.png',
               input_type='cifar10',
               use_grayscale=True,
               use_gradient_images=True,
@@ -20,9 +22,8 @@ number_of_neighbors = 5
 
 test_batch_size = params['test_batch_size']
 
-#load kekse
-data_train, labels_train, data_test, labels_test = \
-    utils.load_cifar_XandY('/media/jan/DataExt4/BenchmarkDataSets/Classification/cifar-10-batches-py')
+#load cifar10
+data_train, labels_train, data_test, labels_test = utils.load_cifar_XandY(params['data_dir'])
 
 data_test_prep = data_test
 
@@ -61,4 +62,4 @@ with sv.prepare_or_wait_for_session(config=sess_config) as sess:
             r_without = np.concatenate([r_without[:nearest_index,:],r_without[nearest_index+1:,:]],axis=0)
 
     printimages = np.concatenate(images,axis=0)
-    utils.save_images(printimages,[len(samples),number_of_neighbors+1],'/home/jan/Documents/GANResults/natenc_neighbors/test_arange.png')
+    utils.save_images(printimages,[len(samples),number_of_neighbors+1],params['out_path'])
