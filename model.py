@@ -155,6 +155,9 @@ class NATEnc:
             train_data = tf.map_fn(lambda img: tf.random_crop(img,[32,32,1]),train_data)
         else:
             train_data = tf.map_fn(lambda img: tf.random_crop(img,[32,32,3]),train_data)
+
+        train_data = tf.map_fn(lambda img: tf.image.per_image_standardization(img),train_data)
+        test_data = tf.map_fn(lambda img: tf.image.per_image_standardization(img),test_data)
         return train_data, test_data
 
     def apply_sobel(self, input):
