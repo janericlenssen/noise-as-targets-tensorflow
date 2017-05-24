@@ -2,29 +2,16 @@ import model
 import numpy as np
 import tensorflow as tf
 np.random.seed(3333)
-import timeit
 import utils
-from collections import deque
-from scipy import ndimage, misc
 
 
-params = dict(batch_size=16,
-              test_batch_size=32,
+params = dict(test_batch_size=32,
               model_dir='/media/jan/DataExt4/pycharm/natenc-cifar10-allclass',
+              input_type='cifar10',
               use_grayscale=True,
               use_gradient_images=True,
-              lr=0.0001,
-              mlp_lr=0.01,
-              lr_update_step=10000,
-              decay_steps=2,
-              num_epochs=20000,
-              viz_every=100,
-              z_dim=64,
-              layers=5,
-              hidden=64,
-              num_classes=10,
-              input_type='cifar10',
-              neighbors=True)
+              z_dim=16,
+              num_classes=10)
 
 
 num_tests = 1

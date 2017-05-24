@@ -1,9 +1,9 @@
 import model
 import numpy as np
 import tensorflow as tf
-np.random.seed(3333)
 import timeit
 import utils
+np.random.seed(3333)
 
 
 params = dict(batch_size=256,
@@ -16,11 +16,11 @@ params = dict(batch_size=256,
               mlp_lr=0.001,
               lr_update_step=15000,
               decay_steps=2,
-              num_epochs=20000,
+              num_epochs=200,
               output_every=100,
               train_mlp_every=10,
               mlp_epochs=200,
-              z_dim=16,
+              z_dim=32,
               num_classes=10)
 
 

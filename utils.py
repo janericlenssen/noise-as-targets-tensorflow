@@ -1,10 +1,6 @@
-import tensorflow as tf
-import math
-import os
 import numpy as np
 from scipy import misc
 import cPickle as pickle
-import glob
 import scipy.optimize
 
 

@@ -3,8 +3,6 @@ import tensorflow as tf
 slim = tf.contrib.slim
 
 
-
-
 class NATEnc:
     def __init__(self, params):
         self.params = params
@@ -39,7 +37,6 @@ class NATEnc:
 
         self.logits, self.mlp_vars = self.mlp_classifier(self.representation_test,reuse=True)
         self.mlp_top_k = tf.nn.in_top_k(self.logits,self.mlp_labels,1)
-
 
         # Losses
         self.loss = self.calc_loss()
@@ -80,7 +77,6 @@ class NATEnc:
             representation = tf.nn.l2_normalize(x,1)
 
         variables = tf.contrib.framework.get_variables(vs)
-
 
         return representation, variables
 
