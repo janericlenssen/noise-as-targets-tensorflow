@@ -14,4 +14,4 @@ Get neighbors:
 1. Set model_dir and out_path parameters in cifar10_natenc_getNeighbors.py
 2. Run cifar10_natenc_getNeighbors.py
 
-Current status: Work in progress, best cifar10 classification accuracy after 40 epochs of unsupervised training: 27%, not clear how to chose parameters, discussions welcome!
+Current status: Work in progress, best cifar10 classification accuracy after 40 epochs of unsupervised training: 27%, not clear how to chose parameters, discussions, feedback or suggestions are welcome!
