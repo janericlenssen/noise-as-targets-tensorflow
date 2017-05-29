@@ -15,3 +15,4 @@ Get neighbors:
 2. Run cifar10_natenc_getNeighbors.py
 
 Current status: Work in progress, best cifar10 test classification accuracy after 50 epochs of unsupervised training: 43,8%, not clear how to chose parameters, discussions, feedback or suggestions are welcome!
+![Alt text](neighbors.png?raw=true "Title")
