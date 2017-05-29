@@ -6,13 +6,15 @@ slim = tf.contrib.slim
 class NATEnc:
     def __init__(self, params):
         self.params = params
-        # Placeholders for Input
+        # Placeholders
         self.input_train_ph = tf.placeholder(dtype=tf.float32, shape=[None, 32, 32, 3])
         self.input_test_ph = tf.placeholder(dtype=tf.float32, shape=[None, 32, 32, 3])
         self.targets = tf.placeholder(dtype=tf.float32, shape=[None, self.params['z_dim']])
         self.representation_ph = tf.placeholder(dtype=tf.float32, shape=[None, self.params['z_dim']])
         self.dropout_keep_prob = tf.placeholder(tf.float32)
         self.new_lr = tf.placeholder(tf.float32)
+
+        # Variables
         self.lr = tf.Variable(params['lr'])
         self.k = tf.Variable(0., trainable=False, name='k')
         self.step = tf.Variable(0, name='step', trainable=False)
@@ -24,7 +26,6 @@ class NATEnc:
         self.mlp_step = tf.Variable(0, name='mlp_step', trainable=False)
 
         # Input Preprocessing
-        self.channels = 1
         self.input_train, self.input_test = self.image_augmentation(self.input_train_ph, self.input_test_ph)
 
         # Model Def
@@ -32,11 +33,14 @@ class NATEnc:
         self.representation_test, self.enc_vars = self.encoder(self.input_test,reuse=True)
 
         # MLP Classifier
-        self.logits_from_ph, _ = self.mlp_classifier(self.representation_ph)
-        self.mlp_top_k_from_ph = tf.nn.in_top_k(self.logits_from_ph,self.mlp_labels,1)
+        if self.params['augment_mlp_training']:
+            self.logits_train, _ = self.mlp_classifier(self.representation)
+        else:
+            self.logits_train, _ = self.mlp_classifier(self.representation_ph)
+        self.mlp_top_k_from_ph = tf.nn.in_top_k(self.logits_train,self.mlp_labels,1)
 
-        self.logits, self.mlp_vars = self.mlp_classifier(self.representation_test,reuse=True)
-        self.mlp_top_k = tf.nn.in_top_k(self.logits,self.mlp_labels,1)
+        self.logits_test, self.mlp_vars = self.mlp_classifier(self.representation_test,reuse=True)
+        self.mlp_top_k = tf.nn.in_top_k(self.logits_test,self.mlp_labels,1)
 
         # Losses
         self.loss = self.calc_loss()
@@ -80,9 +84,9 @@ class NATEnc:
 
         return representation, variables
 
-    def mlp_classifier(self, x, data_format='NHWC', reuse=False):
+    def mlp_classifier(self, x, reuse=False):
         with tf.variable_scope("mlp",reuse=reuse) as vs:
-            z_dim = self.params['z_dim']
+
             x = slim.fully_connected(x, self.params['num_classes']*20, activation_fn=tf.nn.relu)
             x = slim.fully_connected(x, self.params['num_classes']*20, activation_fn=tf.nn.relu)
             x = slim.fully_connected(x, self.params['num_classes'], activation_fn=None)
@@ -94,7 +98,7 @@ class NATEnc:
         return tf.reduce_mean(self.squared_l2(self.targets,self.representation))
 
     def calc_mlp_loss(self):
-        return tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(self.logits_from_ph,self.mlp_labels))
+        return tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(self.logits_train,self.mlp_labels))
 
     def squared_l2(self, data_in, data_out):
         return tf.reduce_sum(tf.square(data_in - data_out),axis=1)
@@ -142,6 +146,9 @@ class NATEnc:
             train_data = self.apply_sobel(train_data)
         # self.input_real = tf.map_fn(lambda img: tf.image.per_image_standardization(img), self.input_real)
 
+        train_data = tf.map_fn(lambda img: tf.image.per_image_standardization(img),train_data)
+        test_data = tf.map_fn(lambda img: tf.image.per_image_standardization(img),test_data)
+
         test_data = test_data
         if self.params['use_grayscale']:
             test_data = tf.map_fn(lambda img: tf.image.rgb_to_grayscale(img), test_data)
@@ -156,8 +163,6 @@ class NATEnc:
         else:
             train_data = tf.map_fn(lambda img: tf.random_crop(img,[32,32,3]),train_data)
 
-        train_data = tf.map_fn(lambda img: tf.image.per_image_standardization(img),train_data)
-        test_data = tf.map_fn(lambda img: tf.image.per_image_standardization(img),test_data)
         return train_data, test_data
 
     def apply_sobel(self, input):

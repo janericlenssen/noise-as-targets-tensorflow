@@ -11,15 +11,16 @@ params = dict(batch_size=256,
               data_dir='/media/jan/DataExt4/BenchmarkDataSets/Classification/cifar-10-batches-py',
               input_type='cifar10',
               use_grayscale=False,
-              use_gradient_images=True,
+              use_gradient_images=False,
+              augment_mlp_training=False,
               lr=0.0001,
               mlp_lr=0.001,
-              lr_update_step=15000,
+              lr_update_step=10000,
               decay_steps=2,
               num_epochs=200,
               output_every=100,
               train_mlp_every=10,
-              mlp_epochs=200,
+              mlp_epochs=50,
               z_dim=32,
               num_classes=10)
 
@@ -141,22 +142,31 @@ with sv.prepare_or_wait_for_session(config=sess_config) as sess:
             y_train = labels_train[:batches_per_epoch*params['batch_size']]
 
             computed_reps = []
-            for mlp_step in range(batches_per_epoch):
-                batch_x_real = x_train_mlp[mlp_step*params['batch_size']:(mlp_step+1)*params['batch_size']]
-                reps = sess.run(nat_enc.representation,
-                         feed_dict={nat_enc.input_train_ph:batch_x_real,nat_enc.dropout_keep_prob:1.0})
-                computed_reps.append(reps)
+            if not params['augment_mlp_training']:
+                for mlp_step in range(batches_per_epoch):
+                    batch_x_real = x_train_mlp[mlp_step*params['batch_size']:(mlp_step+1)*params['batch_size']]
+                    reps = sess.run(nat_enc.representation,
+                             feed_dict={nat_enc.input_train_ph:batch_x_real,nat_enc.dropout_keep_prob:1.0})
+                    computed_reps.append(reps)
+                computed_reps = np.concatenate(computed_reps,axis=0)
 
-            computed_reps = np.concatenate(computed_reps,axis=0)
             for mlp_step in range(params['mlp_epochs']*batches_per_epoch):
                 if counter % batches_per_epoch == 0:
                     # epoch change. First time this if is true, so also init variables.
                     mlp_batch_idx = 0
-                    y_train, computed_reps = utils.shuffle_together(y_train, computed_reps)
+                    if params['augment_mlp_training']:
+                        y_train, x_train_mlp = utils.shuffle_together(y_train, x_train_mlp)
+                    else:
+                        y_train, computed_reps = utils.shuffle_together(y_train, computed_reps)
 
-                batch_reps = computed_reps[mlp_batch_idx:(mlp_batch_idx + params['batch_size'])]
                 batch_label = y_train[mlp_batch_idx:(mlp_batch_idx + params['batch_size'])]
-                _, loss, top_k, step = sess.run([nat_enc.mlp_train_op,nat_enc.mlp_loss, nat_enc.mlp_top_k_from_ph, nat_enc.mlp_step],
+                if params['augment_mlp_training']:
+                    batch_x = x_train_mlp[mlp_batch_idx:(mlp_batch_idx + params['batch_size'])]
+                    _, loss, top_k, step = sess.run([nat_enc.mlp_train_op,nat_enc.mlp_loss, nat_enc.mlp_top_k_from_ph, nat_enc.mlp_step],
+                         feed_dict={nat_enc.mlp_labels:batch_label, nat_enc.input_train_ph:batch_x, nat_enc.dropout_keep_prob:1.0})
+                else:
+                    batch_reps = computed_reps[mlp_batch_idx:(mlp_batch_idx + params['batch_size'])]
+                    _, loss, top_k, step = sess.run([nat_enc.mlp_train_op,nat_enc.mlp_loss, nat_enc.mlp_top_k_from_ph, nat_enc.mlp_step],
                          feed_dict={nat_enc.mlp_labels:batch_label, nat_enc.representation_ph:batch_reps})
                 top_k = np.sum(top_k)
 
@@ -171,25 +181,26 @@ with sv.prepare_or_wait_for_session(config=sess_config) as sess:
                     summary_writer.flush()
 
                 mlp_batch_idx += params['batch_size']
+                if (mlp_step/batches_per_epoch)%5 == 0 and mlp_step % batches_per_epoch == 0:
+                    # Test trained MLP
+                    labels_test, data_test_prep = utils.shuffle_together(labels_test, data_test_prep)
+                    batches = data_test_prep.shape[0] / params['batch_size']
+                    correct_pred = 0
+                    mlp_batch_idx = 0
+                    for _ in range(batches):
+                        batch_x_test = data_test_prep[mlp_batch_idx:(mlp_batch_idx + params['batch_size'])]
+                        batch_label = labels_test[mlp_batch_idx:(mlp_batch_idx + params['batch_size'])]
+                        top_k = sess.run(nat_enc.mlp_top_k,feed_dict={nat_enc.input_test_ph:batch_x_test, nat_enc.mlp_labels:batch_label,nat_enc.dropout_keep_prob:1.0})
+                        top_k = np.sum(top_k)
+                        correct_pred += top_k
+                        mlp_batch_idx += params['batch_size']
 
-            # Test trained MLP
-            labels_test, data_test_prep = utils.shuffle_together(labels_test, data_test_prep)
-            batches = data_test_prep.shape[0] / params['batch_size']
-            correct_pred = 0
-            mlp_batch_idx = 0
-            for _ in range(batches):
-                batch_x_test = data_test_prep[mlp_batch_idx:(mlp_batch_idx + params['batch_size'])]
-                batch_label = labels_test[mlp_batch_idx:(mlp_batch_idx + params['batch_size'])]
-                top_k = sess.run(nat_enc.mlp_top_k,feed_dict={nat_enc.input_test_ph:batch_x_test, nat_enc.mlp_labels:batch_label,nat_enc.dropout_keep_prob:1.0})
-                top_k = np.sum(top_k)
-                correct_pred += top_k
-                mlp_batch_idx += params['batch_size']
-
-            accuracy = float(correct_pred)/mlp_batch_idx
-            print("MLP test accuracy: {:.6f}".format(accuracy))
-            test_summary = tf.Summary(value=[tf.Summary.Value(tag="mlp_test/test_accuracy", simple_value=accuracy)])
-            summary_writer.add_summary(test_summary,counter)
-            summary_writer.flush()
+                    accuracy = float(correct_pred)/mlp_batch_idx
+                    print("MLP test accuracy: {:.6f}".format(accuracy))
+                    tag = 'mlp_train_epoch'+str(curr_epoch)
+                    test_summary = tf.Summary(value=[tf.Summary.Value(tag=tag+"/test_accuracy", simple_value=accuracy)])
+                    summary_writer.add_summary(test_summary,step)
+                    summary_writer.flush()
 
 
         counter += 1
