@@ -16,7 +16,7 @@ Get neighbors:
 
 Current status: Work in progress, best cifar10 test classification accuracy after 50 epochs of unsupervised training: 43,8%, not clear how to chose parameters, discussions, feedback or suggestions are welcome!
 
-Example of nearest neighbor search on Cifar10:
+Example results of nearest neighbor search on the learned representations (for Cifar 10 test examples):
 
 ![Examples for nearest neighbor search](neighbors.png?raw=true "Examples for nearest neighbor search")
 
