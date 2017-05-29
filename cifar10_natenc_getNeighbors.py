@@ -25,12 +25,12 @@ number_of_neighbors = 5
 
 test_batch_size = params['batch_size']
 
-#load cifar10
+# load cifar10
 data_train, labels_train, data_test, labels_test = utils.load_cifar_XandY(params['data_dir'])
 
 data_test_prep = data_test
 
-# setup gan
+# Setup model
 nat_enc = model.NATEnc(params)
 # tf.global_variables_initializer().run()
 

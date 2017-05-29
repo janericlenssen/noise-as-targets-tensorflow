@@ -40,9 +40,8 @@ data_test_prep = data_test
 targetReps = utils.generateTargetReps(data_train.shape[0], params['z_dim'])
 
 
-# setup gan
+# setup Model
 nat_enc = model.NATEnc(params)
-# tf.global_variables_initializer().run()
 
 # MLP reset op
 mlp_reset_op = tf.variables_initializer(nat_enc.mlp_vars)
@@ -65,9 +64,6 @@ lr = params['lr']
 # set up the TF session and init all ops and variables
 with sv.prepare_or_wait_for_session(config=sess_config) as sess:
 
-    # Pick a big sample from z and project it through G and compare to pdf_x (original data pdf)
-    # this is not data to be trained on, but to check G projections
-    #sample_z = params['z_prior'](-1, 1, [real_data_train.shape[0], params['z_dim']]).astype(np.float32)
     batches_per_epoch = data_train_prep.shape[0] / params['batch_size']
     counter = 0
     curr_epoch = -1
@@ -82,8 +78,7 @@ with sv.prepare_or_wait_for_session(config=sess_config) as sess:
             targetReps, data_train_prep = utils.shuffle_together(targetReps, data_train_prep)
 
         beg_t = timeit.default_timer()
-        # sample a batch from prior pdf z
-        # get a batch of samples from gtruth pdf
+        # Get a batch of samples from training data
         batch_x_real = data_train_prep[batch_idx:(batch_idx + params['batch_size'])]
         batch_target = targetReps[batch_idx:(batch_idx + params['batch_size'])]
         if (curr_epoch +1) % 3 == 0:
