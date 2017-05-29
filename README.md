@@ -20,4 +20,4 @@ Example results of nearest neighbor search on the learned representation (for Ci
 
 ![Examples for nearest neighbor search](neighbors.png?raw=true "Examples for nearest neighbor search")
 
-First column: queried images, second to sixth columns: nearest neighbors.
+First column: query images, second to sixth columns: nearest neighbors.
